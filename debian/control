@@ -2,7 +2,7 @@ Source: hildon-application-manager
 Section: misc
 Priority: optional
 Maintainer: Marius Vollmer <marius.vollmer@nokia.com>
-Build-Depends: debhelper (>= 4.0.0), libapt-pkg-dev (>= 0.7.6), libglib2.0-dev, libgtk2.0-dev, libhildon1-dev, libhildonfm2-dev, libconic0-dev, libgconf2-dev, libosso-gnomevfs2-dev, mce-dev, libhildondesktop1-dev, libalarm-dev, libtime-dev, osso-af-settings, libcurl3-dev, libhal-dev, upstart-dev, maemo-launcher-dev
+Build-Depends: debhelper (>= 4.0.0), libapt-pkg-dev (>= 0.7.6), libglib2.0-dev, libgtk2.0-dev, libhildon1-dev, libhildonfm2-dev, libconic0-dev, libgconf2-dev, libgnomevfs2-dev, mce-dev, libhildondesktop1-dev, libalarm-dev, libtime-dev, osso-af-settings, libcurl4-openssl-dev, maemo-launcher-dev
 Standards-Version: 3.6.0
 
 Package: hildon-application-manager
@@ -16,5 +16,5 @@ Description: A program for managing user installed applications.
 Package: hildon-application-manager-dbg
 Architecture: any
 Section: devel
-Depends: hildon-application-manager (= ${Source-Version})
+Depends: hildon-application-manager (= ${source:Version})
 Description: Debug symbols for the hildon application manager.
