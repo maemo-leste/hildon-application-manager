@@ -28,6 +28,7 @@
 #include <stdio.h>
 #include <libintl.h>
 #include <locale.h>
+#include <string.h>
 
 #include <gtk/gtk.h>
 #include <gconf/gconf-client.h>

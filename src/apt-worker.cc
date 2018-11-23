@@ -90,13 +90,7 @@
 #include <apt-pkg/sha1.h>
 #include <apt-pkg/sha256.h>
 
-#include <glib/glist.h>
-#include <glib/gstring.h>
-#include <glib/gstrfuncs.h>
-#include <glib/gmem.h>
-#include <glib/gfileutils.h>
-#include <glib/gslist.h>
-#include <glib/gkeyfile.h>
+#include <glib.h>
 
 #include "apt-worker-proto.h"
 #include "confutils.h"
