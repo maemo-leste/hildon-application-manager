@@ -25,7 +25,7 @@
 #include <dbus/dbus-glib-lowlevel.h>
 #include <string.h>
 #include <libintl.h>
-#include <libhal.h>
+//#include <libhal.h>
 
 #include "apt-worker-client.h"
 #include "dbus.h"
@@ -857,52 +857,53 @@ init_dbus_or_die (bool top_existing)
 bool
 enough_battery_p (void)
 {
-  LibHalContext *hal;
-
-  int i;
-  char **devs;
-  int n_devs;
-
-  hal = libhal_ctx_new ();
-  libhal_ctx_set_dbus_connection (hal, dbus_bus_get (DBUS_BUS_SYSTEM, NULL));
-  devs = libhal_find_device_by_capability (hal, "battery", &n_devs, NULL);
-
-  if (devs)
-    {
-      for (i = 0; i < n_devs; i++)
-	{
-	  DBusError error;
-
-	  dbus_error_init (&error);
-	  dbus_bool_t charging = libhal_device_get_property_bool
-	    (hal, devs[i], "battery.rechargeable.is_charging", &error);
-
-	  if (dbus_error_is_set (&error))
-	    dbus_error_free (&error);
-	  else
-	    {
-	      if (charging)
-		break;
-	    }
-
-	  dbus_error_init (&error);
-	  dbus_int32_t percentage = libhal_device_get_property_int
-	    (hal, devs[i], "battery.charge_level.percentage", &error);
-
-	  if (dbus_error_is_set (&error))
-	    {
-	      dbus_error_free (&error);
-	      break;
-	    }
-	  else
-	    {
-	      if (percentage > 50)
-		break;
-	    }
-	}
-    }
-
-  libhal_ctx_shutdown (hal, NULL);
-
-  return devs == NULL || i < n_devs;
+//  LibHalContext *hal;
+//
+//  int i;
+//  char **devs;
+//  int n_devs;
+//
+//  hal = libhal_ctx_new ();
+//  libhal_ctx_set_dbus_connection (hal, dbus_bus_get (DBUS_BUS_SYSTEM, NULL));
+//  devs = libhal_find_device_by_capability (hal, "battery", &n_devs, NULL);
+//
+//  if (devs)
+//    {
+//      for (i = 0; i < n_devs; i++)
+//	{
+//	  DBusError error;
+//
+//	  dbus_error_init (&error);
+//	  dbus_bool_t charging = libhal_device_get_property_bool
+//	    (hal, devs[i], "battery.rechargeable.is_charging", &error);
+//
+//	  if (dbus_error_is_set (&error))
+//	    dbus_error_free (&error);
+//	  else
+//	    {
+//	      if (charging)
+//		break;
+//	    }
+//
+//	  dbus_error_init (&error);
+//	  dbus_int32_t percentage = libhal_device_get_property_int
+//	    (hal, devs[i], "battery.charge_level.percentage", &error);
+//
+//	  if (dbus_error_is_set (&error))
+//	    {
+//	      dbus_error_free (&error);
+//	      break;
+//	    }
+//	  else
+//	    {
+//	      if (percentage > 50)
+//		break;
+//	    }
+//	}
+//    }
+//
+//  libhal_ctx_shutdown (hal, NULL);
+//
+//  return devs == NULL || i < n_devs;
+return 1;
 }

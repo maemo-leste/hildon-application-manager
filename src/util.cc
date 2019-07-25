@@ -4099,7 +4099,7 @@ escape_key_press_event (GtkWidget *widget,
 			  gpointer data)
 {
   GtkDialog *dialog = GTK_DIALOG (widget);
-  int response = (int)data;
+  intptr_t response = (intptr_t)data;
 
   if (event->keyval == HILDON_HARDKEY_ESC)
     {

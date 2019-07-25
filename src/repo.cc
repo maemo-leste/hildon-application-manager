@@ -68,7 +68,7 @@ repository_uri_is_valid (const gchar* uri)
   if (!uri)
     return false;
 
-  char *start_str = strchr (uri, ':');
+  const char *start_str = strchr (uri, ':');
   if (!start_str)
     return false;
   if (strncmp (start_str, "://", 3) != 0)
