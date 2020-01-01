@@ -1771,7 +1771,7 @@ public:
 mydebSystem::mydebSystem ()
   : debSystem ()
 {
-   Label = "handsfree Debian dpkg interface";
+   //Label = "handsfree Debian dpkg interface";
 }
 
 signed
