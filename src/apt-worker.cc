@@ -5092,6 +5092,7 @@ find_deb_meta_index (pkgIndexFile *index)
 static char *
 get_meta_info_key (debReleaseIndex *meta)
 {
+#if 0
   string file = meta->MetaIndexFile ("Release.gpg.info");
   char *key = NULL;
 
@@ -5121,6 +5122,7 @@ get_meta_info_key (debReleaseIndex *meta)
     }
 
   return key;
+#endif
 }
 
 static int
