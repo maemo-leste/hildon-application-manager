@@ -1,3 +1,9 @@
+hildon-application-manager (2.3.0) unstable; urgency=low
+
+  * Initial Leste import - will need lots of fixes
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Wed, 01 Jan 2020 22:40:23 +0100
+
 hildon-application-manager (1:2.2.75-2) unstable; urgency=low
 
   * Fix double-free
