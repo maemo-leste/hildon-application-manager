@@ -51,8 +51,6 @@ fi
 
 rm -f /etc/osso-backup/applications/osso-application-manager.conf
 
-update-sudoers || true
-
 if [ -x /usr/bin/update-mime-database ]; then
  update-mime-database /usr/share/mime
 fi
