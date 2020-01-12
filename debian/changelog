@@ -1,4 +1,4 @@
-hildon-application-manager (2.3.0-1) unstable; urgency=low
+hildon-application-manager (2.3.1) unstable; urgency=low
 
   * Depend on hildon-application-manager-settings-standard
 
