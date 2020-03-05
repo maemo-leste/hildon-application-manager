@@ -28,7 +28,6 @@
 #include <sys/stat.h>
 
 #include <gtk/gtk.h>
-#include <libgnomevfs/gnome-vfs.h>
 
 #include "log.h"
 #include "util.h"
@@ -57,45 +56,49 @@ save_log_cont (bool res, void *data)
   bool success = res;
 
   if (res)
+  {
+    GFile *file;
+    GFileOutputStream *stream;
+    gsize bytes;
+    GError *error = NULL;
+
+    file = g_file_new_for_uri (uri);
+    stream = g_file_replace (file, NULL, TRUE, G_FILE_CREATE_NONE, NULL, &error);
+
+    if (error != NULL)
     {
-      GnomeVFSHandle *handle = NULL;
-      GnomeVFSResult result;
-
-      result = gnome_vfs_create (&handle, uri,
-				 GNOME_VFS_OPEN_WRITE,
-				 FALSE,
-				 0644);
-
-      if (result != GNOME_VFS_OK)
-	{
-	  annoy_user_with_gnome_vfs_result (result, uri,
-					    save_log_do_nothing, NULL);
-	  success = false;
-	}
-      else
-	{
-	  if (log_text)
-	    {
-	      result = gnome_vfs_write (handle,
-					log_text->str, log_text->len,
-					NULL);
-	      if (result != GNOME_VFS_OK)
-		{
-		  annoy_user_with_gnome_vfs_result (result, uri,
-						    save_log_do_nothing, NULL);
-		  success = false;
-		}
-	    }
-
-	  result = gnome_vfs_close (handle);
-	  if (result != GNOME_VFS_OK)
-	    {
-	      annoy_user_with_gnome_vfs_result (result, uri,
-						save_log_do_nothing, NULL);
-	      success = false;
-	    }
-	}
+      annoy_user_with_g_error (error, uri, save_log_do_nothing, NULL);
+      g_error_free (error);
+      success = false;
     }
+    else
+    {
+      if (log_text)
+      {
+        if (!g_output_stream_write_all (G_OUTPUT_STREAM(stream),
+                                        log_text->str,
+                                        log_text->len,
+                                        &bytes,
+                                        NULL,
+                                        &error))
+        {
+          annoy_user_with_g_error (error, uri, save_log_do_nothing, NULL);
+          g_error_free (error);
+          success = false;
+        }
+
+        if (!g_output_stream_close (G_OUTPUT_STREAM(stream), NULL, &error))
+        {
+          annoy_user_with_g_error (error, uri, save_log_do_nothing, NULL);
+          g_error_free (error);
+          success = false;
+        }
+      }
+    }
+
+    g_object_unref (stream);
+    g_object_unref (file);
+  }
 
   /* Store the last path used for saving the log */
   if (last_save_log_dir != NULL)
@@ -126,8 +129,9 @@ save_log_cont (bool res, void *data)
 static void
 save_log (char *uri, void *data)
 {
-  GnomeVFSFileInfo info;
-  GnomeVFSResult result;
+  GFileInfo *info;
+  GFile *file;
+  GError *error = NULL;
 
   /* Now users able to delete the parent dialog (save dialog is closed)... */
   g_object_set (G_OBJECT (data), "deletable", TRUE, NULL);
@@ -139,20 +143,18 @@ save_log (char *uri, void *data)
       return;
     }
 
-  /* XXX - Using gnome_vfs_create with exclusive == true to check for
-           file existence doesn't work with obex.  Why am I not
-           surprised?
-   */
+  file = g_file_new_for_uri (uri);
+  info = g_file_query_info (file, G_FILE_ATTRIBUTE_ACCESS_CAN_WRITE,
+                            G_FILE_QUERY_INFO_NONE, NULL, &error);
 
-  result = gnome_vfs_get_file_info (uri, &info, GNOME_VFS_FILE_INFO_DEFAULT);
-  if (result == GNOME_VFS_OK)
+  if (info)
     {
       ask_custom (dgettext ("hildon-fm", "docm_nc_replace_file"),
 		  dgettext ("hildon-libs", "wdgt_bd_yes"),
 		  dgettext ("hildon-libs", "wdgt_bd_no"),
 		  save_log_cont, uri);
     }
-  else if (result != GNOME_VFS_ERROR_NOT_FOUND)
+  else if (!g_error_matches (error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND))
     {
       /* Remove the previously stored dir if failed */
       if (last_save_log_dir != NULL)
@@ -160,12 +162,15 @@ save_log (char *uri, void *data)
       last_save_log_dir = NULL;
 
       /* Annoy user with error */
-      annoy_user_with_gnome_vfs_result (result, uri,
-					save_log_do_nothing, NULL);
+      annoy_user_with_g_error (error, uri, save_log_do_nothing, NULL);
+      g_error_free (error);
       g_free (uri);
     }
   else
     save_log_cont (true, uri);
+
+  g_object_unref (info);
+  g_object_unref (file);
 }
 
 void

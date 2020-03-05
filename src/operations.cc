@@ -28,6 +28,7 @@
 #include <libintl.h>
 #include <errno.h>
 #include <string.h>
+#include <sys/stat.h>
 
 #include <gtk/gtk.h>
 #include <hildon/hildon-note.h>

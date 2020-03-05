@@ -2483,7 +2483,11 @@ install_from_file_flow (const char *filename,
 	  /* Try to convert filename to GnomeVFS uri */
 	  char *fileuri = NULL;
 	  if (g_path_is_absolute (filename))
-	    fileuri = gnome_vfs_get_uri_from_local_path (filename);
+      {
+        GFile *file = g_file_new_for_path (filename);
+        fileuri = g_file_get_uri (file);
+        g_object_unref (file);
+      }
 
 	  /* If there's an error then user filename as is */
 	  if (fileuri == NULL)

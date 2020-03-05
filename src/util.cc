@@ -833,34 +833,36 @@ annoy_user_with_errno (int err, const gchar *detail,
 }
 
 void
-annoy_user_with_gnome_vfs_result (GnomeVFSResult result, const gchar *detail,
+annoy_user_with_g_error (GError *error, const gchar *detail,
 				  void (*cont) (void *), void *data)
 {
-  add_log ("%s: %s\n", detail, gnome_vfs_result_to_string (result));
+  if (error)
+    add_log ("%s: %s\n", detail, error->message);
 
-  if (result == GNOME_VFS_ERROR_NAME_TOO_LONG)
+  if (g_error_matches (error, G_IO_ERROR, G_IO_ERROR_FILENAME_TOO_LONG))
     {
       irritate_user (_HCS ("file_ib_name_too_long"));
       cont (data);
     }
-  else if (result == GNOME_VFS_ERROR_ACCESS_DENIED
-	   || result == GNOME_VFS_ERROR_NOT_PERMITTED)
+  else if (g_error_matches (error, G_IO_ERROR, G_IO_ERROR_PERMISSION_DENIED))
     {
       irritate_user (_FM ("sfil_ib_saving_not_allowed"));
       cont (data);
     }
-  else if (result == GNOME_VFS_ERROR_NOT_FOUND)
+  else if (g_error_matches (error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND))
     annoy_user (_HCS ("sfil_ni_cannot_continue_target_folder_deleted"),
 		cont, data);
-  else if (result == GNOME_VFS_ERROR_NO_SPACE)
+  else if (g_error_matches (error, G_IO_ERROR, G_IO_ERROR_NO_SPACE))
     annoy_user (_HCS ("sfil_ni_not_enough_memory"),
 		cont, data);
-  else if (result == GNOME_VFS_ERROR_READ_ONLY)
+  else if (g_error_matches (error, G_IO_ERROR, G_IO_ERROR_READ_ONLY))
     annoy_user (_FM ("ckdg_fi_properties_read_only"),
                 cont, data);
+  /* TODO: Left commented because of no similar error in GIO
   else if (result == GNOME_VFS_ERROR_READ_ONLY_FILE_SYSTEM)
     annoy_user (_FM ("sfil_ib_readonly_location"),
-                cont, data);
+	    cont, data);
+  */
   else
     annoy_user (_("ai_ni_operation_failed"), cont, data);
 }
@@ -3320,13 +3322,12 @@ pixbuf_from_base64 (const char *base64)
          punt the issue and use global state.
 */
 
-GnomeVFSResult copy_result;
+static GError *copy_result;
 static void (*copy_cont) (char *local, void *data);
 static void *copy_cont_data;
 static char *copy_local;
 static char *copy_target;
 static char *copy_tempdir;
-static GnomeVFSHandle *copy_vfs_handle;
 
 static void
 fail_copy_cont (void *data)
@@ -3335,13 +3336,20 @@ fail_copy_cont (void *data)
   copy_cont = NULL;
 }
 
+enum {
+  STATUS_OK,
+  STATUS_CANCELLED,
+  STATUS_NOT_CONNECTED,
+  STATUS_FAIL,
+};
+
 static void
-call_copy_cont (GnomeVFSResult result)
+call_copy_cont (gint status)
 {
   if (copy_local)
     stop_entertaining_user ();
 
-  if (result == GNOME_VFS_OK)
+  if (status == STATUS_OK)
     {
       copy_cont (copy_target, copy_cont_data);
       copy_cont = NULL;
@@ -3351,79 +3359,75 @@ call_copy_cont (GnomeVFSResult result)
       cleanup_temp_file ();
       g_free (copy_target);
 
-      if (result == GNOME_VFS_ERROR_IO)
-	{
-	  annoy_user (_HCS ("sfil_ni_cannot_open_no_connection"),
-		      fail_copy_cont, NULL);
-	}
-      else if (result == GNOME_VFS_ERROR_CANCELLED)
-	{
-	  copy_cont (NULL, copy_cont_data);
-	  copy_cont = NULL;
-	}
-      else if (result != GNOME_VFS_OK)
-	{
-	  annoy_user (_("ai_ni_operation_failed"),
-		      fail_copy_cont, NULL);
-	}
+      if (status == STATUS_NOT_CONNECTED)
+      {
+        annoy_user (_HCS ("sfil_ni_cannot_open_no_connection"), fail_copy_cont, NULL);
+      }
+      /* TODO: G_IO_ERROR_HOST_UNREACHABLE, G_IO_ERROR_NETWORK_UNREACHABLE, G_IO_ERROR_CONNECTION_REFUSED
+       */
+      else if (status == STATUS_CANCELLED)
+      {
+        copy_cont (NULL, copy_cont_data);
+        copy_cont = NULL;
+      }
+      else
+      {
+        annoy_user (_("ai_ni_operation_failed"), fail_copy_cont, NULL);
+      }
     }
 }
 
 static bool copy_cancel_requested;
 
-static gboolean
-copy_progress (GnomeVFSAsyncHandle *handle,
-	       GnomeVFSXferProgressInfo *info,
-	       gpointer unused)
+static void
+copy_progress (goffset cur, goffset tot, gpointer cancellable)
 {
-#if 0
-  fprintf (stderr, "phase %d, status %d, vfs_status %s\n",
-	   info->phase, info->status,
-	   gnome_vfs_result_to_string (info->vfs_status));
-#endif
 
-  if (info->file_size > 0)
-    set_entertainment_download_fun (op_downloading,
-				    info->bytes_copied, info->file_size);
+  if (tot > 0)
+    set_entertainment_download_fun(op_downloading, cur, tot);
 
-  if (info->phase == GNOME_VFS_XFER_PHASE_COMPLETED)
+  if (cur == tot)
+  {
+    struct stat buf;
+    GError *error = NULL;
+
+    if (stat (copy_target, &buf) < 0)
     {
-      struct stat buf;
-
-      if (stat (copy_target, &buf) < 0)
-	{
-	  /* If a obex connection is refused before the downloading is
-	     started, gnome_vfs_async_xfer seems to report success
-	     without actually creating the file.  We treat that
-	     situation as an I/O error.
-	  */
-	  call_copy_cont (GNOME_VFS_ERROR_IO);
-	}
-      else
-	call_copy_cont (copy_cancel_requested
-			? GNOME_VFS_ERROR_CANCELLED
-			: GNOME_VFS_OK);
-
-      gnome_vfs_async_cancel (handle);
+      /* TODO: Is this still necessary?
+       *
+       * Old comment:
+       * If an obex connection is refused before the downloading is
+       * started, gnome_vfs_async_xfer seems to report success
+       * without actually creating the file. We treat that
+       * situation as an I/O error.
+       */
+      call_copy_cont (STATUS_FAIL);
     }
+    else
+    {
+      call_copy_cont (STATUS_CANCELLED);
+    }
+    g_cancellable_cancel (G_CANCELLABLE(cancellable));
+  }
 
-  /* Produce an appropriate return value depending on the status.
-   */
+  /* TODO:
+   * Produce an appropriate return value depending on the status.
   if (info->status == GNOME_VFS_XFER_PROGRESS_STATUS_OK)
-    {
-      return !copy_cancel_requested;
-    }
+  {
+    return !copy_cancel_requested;
+  }
   else if (info->status == GNOME_VFS_XFER_PROGRESS_STATUS_VFSERROR)
-    {
-      call_copy_cont (info->vfs_status);
-      gnome_vfs_async_cancel (handle);
-      return GNOME_VFS_XFER_ERROR_ACTION_ABORT;
-    }
+  {
+    call_copy_cont (info->vfs_status);
+    g_cancellable_cancel (cancellable);
+    return GNOME_VFS_XFER_ERROR_ACTION_ABORT;
+  }
   else
-    {
-      add_log ("unexpected status %d in copy_progress\n", info->status);
-      return 1;
-    }
+  {
+    add_log ("unexpected status %d in copy_progress\n", info->status);
+    return 1;
+  }
+  */
 }
 
 static void
@@ -3433,24 +3437,13 @@ cancel_copy (void *unused)
 }
 
 static void
-do_copy (const char *source, GnomeVFSURI *source_uri,
-	 gchar *target)
+do_copy (GFile *source_uri, gchar *target)
 {
-  GnomeVFSAsyncHandle *handle;
-  GnomeVFSURI *target_uri;
-  GList *source_uri_list, *target_uri_list;
-  GnomeVFSResult result;
+  GFile *target_uri;
+  GError *error = NULL;
+  GCancellable *cancellable = g_cancellable_new ();
 
-  target_uri = gnome_vfs_uri_new (target);
-  if (target_uri == NULL)
-    {
-      call_copy_cont (GNOME_VFS_ERROR_NO_MEMORY);
-      return;
-    }
-
-  source_uri_list = g_list_append (NULL, (gpointer) source_uri);
-  target_uri_list = g_list_append (NULL, (gpointer) target_uri);
-
+  target_uri = g_file_new_for_uri (target);
   copy_cancel_requested = false;
 
   set_entertainment_fun (NULL, -1, -1, 0);
@@ -3459,20 +3452,18 @@ do_copy (const char *source, GnomeVFSURI *source_uri,
 
   start_entertaining_user (TRUE);
 
-  result = gnome_vfs_async_xfer (&handle,
-				 source_uri_list,
-				 target_uri_list,
-				 GNOME_VFS_XFER_DEFAULT,
-				 GNOME_VFS_XFER_ERROR_MODE_QUERY,
-				 GNOME_VFS_XFER_OVERWRITE_MODE_REPLACE,
-				 GNOME_VFS_PRIORITY_DEFAULT,
-				 copy_progress,
-				 NULL,
-				 NULL,
-				 NULL);
+  g_file_copy_async (source_uri,
+                     target_uri,
+                     G_FILE_COPY_TARGET_DEFAULT_PERMS,
+                     G_PRIORITY_DEFAULT,
+                     cancellable,
+                     copy_progress,
+                     cancellable,
+                     NULL,
+                     NULL);
 
-  if (result != GNOME_VFS_OK)
-    call_copy_cont (result);
+  g_object_unref (target_uri);
+  g_object_unref (cancellable);
 }
 
 void
@@ -3493,21 +3484,9 @@ localize_file_and_keep_it_open (const char *uri,
   copy_target = NULL;
   copy_local = NULL;
   copy_tempdir = NULL;
-  copy_vfs_handle = NULL;
 
-  if (!gnome_vfs_init ())
-    {
-      call_copy_cont (GNOME_VFS_ERROR_GENERIC);
-      return;
-    }
-
-  GnomeVFSURI *vfs_uri = gnome_vfs_uri_new (uri);
-
-  if (vfs_uri == NULL)
-    {
-      call_copy_cont (GNOME_VFS_ERROR_NO_MEMORY);
-      return;
-    }
+  GFile *vfs_uri = g_file_new_for_uri (uri);
+  GFileInputStream *file;
 
   /* The apt-worker can access all "file://" URIs, whether they are
      considered local by GnomeVFS or not.  (GnomeVFS considers a
@@ -3515,23 +3494,22 @@ localize_file_and_keep_it_open (const char *uri,
      can read that just fine of course.)
   */
 
-  const gchar *scheme = gnome_vfs_uri_get_scheme (vfs_uri);
+  const gchar *scheme = g_file_get_uri_scheme (vfs_uri);
   if (scheme && !strcmp (scheme, "file"))
     {
       /* Open the file to protect against unmounting of the MMC, etc.
        */
-      GnomeVFSResult result;
+      file = g_file_read (vfs_uri, NULL, NULL);
 
-      result = gnome_vfs_open_uri (&copy_vfs_handle, vfs_uri,
-				   GNOME_VFS_OPEN_READ);
-      if (result != GNOME_VFS_OK)
-	call_copy_cont (result);
+      if (file == NULL)
+      {
+        call_copy_cont (STATUS_FAIL);
+      }
       else
-	{
-	  const gchar *path = gnome_vfs_uri_get_path (vfs_uri);
-	  copy_target = gnome_vfs_unescape_string (path, NULL);
-	  call_copy_cont (GNOME_VFS_OK);
-	}
+      {
+        copy_target = g_file_get_path (vfs_uri);
+        call_copy_cont (STATUS_OK);
+      }
     }
   else
     {
@@ -3549,27 +3527,28 @@ localize_file_and_keep_it_open (const char *uri,
 
       copy_tempdir = g_strdup (mkdtemp (tempdir_template));
       if (copy_tempdir == NULL)
-	{
-	  add_log ("Can not create %s: %m", copy_tempdir);
-	  call_copy_cont (GNOME_VFS_ERROR_GENERIC);
-	}
+      {
+        add_log ("Can not create %s: %m", copy_tempdir);
+        call_copy_cont (STATUS_FAIL);
+      }
       else if (chmod (copy_tempdir, 0755) < 0)
-	{
-	  add_log ("Can not chmod %s: %m", copy_tempdir);
-	  call_copy_cont (GNOME_VFS_ERROR_GENERIC);
-	}
+      {
+        add_log ("Can not chmod %s: %m", copy_tempdir);
+        call_copy_cont (STATUS_FAIL);
+      }
       else
-	{
-	  basename = gnome_vfs_uri_extract_short_path_name (vfs_uri);
-	  copy_local = g_strdup_printf ("%s/%s", copy_tempdir, basename);
-	  free (basename);
+      {
+        basename = g_file_get_basename (vfs_uri);
+        copy_local = g_strdup_printf ("%s/%s", copy_tempdir, basename);
+        free (basename);
 
-	  copy_target = g_strdup (copy_local);
-	  do_copy (uri, vfs_uri, copy_target);
-	}
+        copy_target = g_strdup (copy_local);
+        do_copy (vfs_uri, copy_target);
+      }
     }
 
-  gnome_vfs_uri_unref (vfs_uri);
+  /* g_object_unref (file); */
+  g_object_unref (vfs_uri);
 }
 
 void
@@ -3579,12 +3558,6 @@ cleanup_temp_file ()
      point of the user, the installation has been completed and he
      has seen the report already.
   */
-
-  if (copy_vfs_handle)
-    {
-      gnome_vfs_close (copy_vfs_handle);
-      copy_vfs_handle = NULL;
-    }
 
   if (copy_local)
     {
