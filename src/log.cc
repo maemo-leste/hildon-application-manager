@@ -285,7 +285,7 @@ show_log_dialog_flow ()
 }
 
 #if !HAVE_G_STRING_APPEND_VPRINTF
-static void
+void
 g_string_append_vprintf (GString *str, const gchar *fmt, va_list args)
 {
   /* As found on the net.  Hackish.
