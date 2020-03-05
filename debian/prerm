@@ -1,9 +1,0 @@
-#! /bin/sh
-
-set -e
-
-update-sudoers || true
-
-#DEBHELPER#
-
-exit 0
