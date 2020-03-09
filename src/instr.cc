@@ -526,7 +526,7 @@ execute_card_install (GKeyFile *keyfile, const char *entry,
     }
 
   gchar *dirname = g_path_get_dirname (filename);
-  gchar *esc_dirname = gnome_vfs_escape_string (dirname);
+  gchar *esc_dirname = g_uri_escape_string (dirname, NULL, true);
   xexp *card_catalogues = convert_catalogues (keyfile, entry,
 					      "card_catalogues", esc_dirname);
   xexp *perm_catalogues = convert_catalogues (keyfile, entry,

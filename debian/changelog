@@ -1,3 +1,11 @@
+hildon-application-manager (2.4.0) unstable; urgency=low
+
+  * Port source code from gnomevfs to GIO.
+  * Port package to debhelper 10.
+  * Fix compilation error.
+
+ -- Ivan J. <parazyd@dyne.org>  Mon, 09 Mar 2020 01:51:38 +0100
+
 hildon-application-manager (2.3.1) unstable; urgency=low
 
   * Depend on hildon-application-manager-settings-standard

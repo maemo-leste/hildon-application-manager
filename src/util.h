@@ -26,7 +26,6 @@
 
 #include <gtk/gtk.h>
 #include <gdk/gdkx.h>
-#include <libgnomevfs/gnome-vfs.h>
 #include <hildon/hildon.h>
 
 #include "main.h"
@@ -160,8 +159,8 @@ void maybe_exit ();
   the given errno value ERR.  The DETAIL string will be put into the
   Log together with a detailed error message.
 
-  ANNOY_USER_WITH_GNOME_VFS_RESULT does the same for a GnomeVFSResult
-  code instead of a errno code.
+  ANNOY_USER_WITH_G_ERROR does the same for a GError instead of an
+  errno code.
 
   IRRITATE_USER shows TEXT in a information banner which goes away
   automatically after a certain time.
@@ -225,7 +224,7 @@ void annoy_user_with_arbitrary_details_2 (const gchar *text,
 
 void annoy_user_with_errno (int err, const gchar *detail,
 			    void (*cont) (void *), void *data);
-void annoy_user_with_gnome_vfs_result (GnomeVFSResult result,
+void annoy_user_with_g_error (GError *error,
 				       const gchar *detail,
 				       void (*cont) (void *), void *data);
 
