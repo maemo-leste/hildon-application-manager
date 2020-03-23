@@ -1,3 +1,9 @@
+hildon-application-manager (2.4.1) unstable; urgency=low
+
+  * Remove CSSU notification from Fremantle era
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Mon, 23 Mar 2020 15:15:58 +0100
+
 hildon-application-manager (2.4.0) unstable; urgency=low
 
   * Port source code from gnomevfs to GIO.
