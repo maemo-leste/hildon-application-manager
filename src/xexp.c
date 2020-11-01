@@ -786,7 +786,7 @@ xexp_write (FILE *f, xexp *x)
 int
 xexp_write_file (const char *filename, xexp *x)
 {
-  char *tmp_filename = g_strdup_printf ("%s#%d", filename, getpid);
+  char *tmp_filename = g_strdup_printf ("%s#%d", filename, getpid());
   FILE *f = fopen (tmp_filename, "w");
 
   if (f == NULL)
