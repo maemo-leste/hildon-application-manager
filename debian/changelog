@@ -1,3 +1,10 @@
+hildon-application-manager (2.4.2) unstable; urgency=low
+
+  * Make sure libtool does not interfere with maemo-launcher linker flags
+  * Fix compiler warning
+
+ -- Ivaylo Dimitrov <ivo.g.dimitrov.75@gmail.com>  Sun, 01 Nov 2020 16:18:11 +0200
+
 hildon-application-manager (2.4.1) unstable; urgency=low
 
   * Remove CSSU notification from Fremantle era
