@@ -931,14 +931,22 @@ is_user_section (const char *section)
 }
 
 static bool
+is_debug_section (const char *section)
+{
+  if (section == NULL)
+    return false;
+
+  return !strncmp (section, "user/debug", 10);
+}
+
+static bool
 package_visible (package_info *pi, bool installed)
 {
   if (red_pill_mode && red_pill_show_all)
     return true;
 
-  return is_user_section (installed
-			  ? pi->installed_section
-			  : pi->available_section);
+  const char* sect = installed ? pi->installed_section : pi->available_section;
+  return is_user_section (sect) && !is_debug_section(sect);
 }
 
 static void
