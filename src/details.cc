@@ -63,7 +63,7 @@ deptype_name (apt_proto_deptype dep)
     case deptype_conflicts:
       return "Conflicts";
     default:
-      return "Unkown";
+      return "Unknown";
     }
 }
 
