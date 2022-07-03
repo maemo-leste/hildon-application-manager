@@ -591,7 +591,7 @@ canonicalize_section_name (const char *name)
 const char *
 nicify_section_name (const char *name)
 {
-  if (name == NULL || red_pill_mode && red_pill_show_all)
+  if (name == NULL || (red_pill_mode && red_pill_show_all))
     return name;
 
   name = canonicalize_section_name (name);
