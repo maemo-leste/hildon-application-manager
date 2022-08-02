@@ -1,3 +1,9 @@
+hildon-application-manager (2.4.4) unstable; urgency=low
+
+  * Add Bulgarian translation for the categories
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Tue, 02 Aug 2022 12:13:45 +0200
+
 hildon-application-manager (2.4.3) unstable; urgency=low
 
   * Hide debug symbols packages by default
