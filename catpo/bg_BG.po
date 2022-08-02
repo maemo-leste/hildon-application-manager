@@ -1,0 +1,85 @@
+# Header entry was created by Lokalize.
+#
+# Russian translations of the maemo.org application categories
+#
+# Copyright 2008 Marat Fayzullin
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# version; either version 2, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# 02110-1301 USA
+# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA.
+# Blagovest Petrov <blagovest@petrovs.info>, 2022.
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Last-Translator: Blagovest Petrov <blagovest@petrovs.info>\n"
+"PO-Revision-Date: 2022-08-02 11:48+0300\n"
+"Project-Id-Version: \n"
+"Language-Team: English <kde-i18n-doc@kde.org>\n"
+"Language: en_US\n"
+"MIME-Version: 1.0\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Generator: Lokalize 22.04.3\n"
+
+# Russian translations of the maemo.org application categories
+#
+# Copyright 2008 Marat Fayzullin
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# version; either version 2, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+# 02110-1301 USA
+msgid "desktop"
+msgstr "Работен плот "
+
+msgid "development"
+msgstr "Разработка"
+
+msgid "education"
+msgstr "Образование"
+
+msgid "games"
+msgstr "Игри"
+
+msgid "graphics"
+msgstr "Графика"
+
+msgid "multimedia"
+msgstr "Мултимедия"
+
+msgid "navigation"
+msgstr "Навигация"
+
+msgid "network"
+msgstr "Мрежа"
+
+msgid "office"
+msgstr "Офис"
+
+msgid "science"
+msgstr "Наука"
+
+msgid "system"
+msgstr "Система"
+
+msgid "utilities"
+msgstr "Помощни програми"
