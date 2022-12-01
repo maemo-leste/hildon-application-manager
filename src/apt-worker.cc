@@ -86,9 +86,8 @@
 #include <apt-pkg/metaindex.h>
 #include <apt-pkg/debmetaindex.h>
 #include <apt-pkg/policy.h>
-#include <apt-pkg/md5.h>
-#include <apt-pkg/sha1.h>
-#include <apt-pkg/sha256.h>
+#include <apt-pkg/hashes.h>
+#include <apt-pkg/fileutl.h>
 
 #include <glib.h>
 
@@ -5388,14 +5387,17 @@ myDPkgPM::CheckDownloadedPkgs (bool clean_corrupted)
       if (_error->PendingError() == true) // return false?
         continue;
 
+      Hashes hashes = Hashes();
+      hashes.AddFD(Fd.Fd(), Fd.Size());
+
+      string file_sha256 = hashes.GetHashString(Hashes::SHA256SUM).HashValue();
+      string file_sha1 = hashes.GetHashString(Hashes::SHA1SUM).HashValue();
+      string MD5 = hashes.GetHashString(Hashes::MD5SUM).HashValue();
+
       string ExpectedSHA256 = rec.get_string("SHA256");
 
       if (!ExpectedSHA256.empty())
         {
-          SHA256Summation SHA256;
-          SHA256.AddFD(Fd.Fd(), Fd.Size());
-          string file_sha256 = string(SHA256.Result());
-
           if (file_sha256 != ExpectedSHA256)
             {
               log_stderr ("File %s is corrupted (SHA256).", File.c_str());
@@ -5408,10 +5410,6 @@ myDPkgPM::CheckDownloadedPkgs (bool clean_corrupted)
 
           if (!ExpectedSHA1.empty())
             {
-              SHA1Summation SHA1;
-              SHA1.AddFD(Fd.Fd(), Fd.Size());
-              string file_sha1 = string(SHA1.Result());
-
               if (file_sha1 != ExpectedSHA1)
                 {
                   log_stderr ("File %s is corrupted (SHA1).", File.c_str());
@@ -5424,10 +5422,6 @@ myDPkgPM::CheckDownloadedPkgs (bool clean_corrupted)
 
               if (!ExpectedMD5.empty())
                 {
-                  MD5Summation sum;
-                  sum.AddFD (Fd.Fd(), Fd.Size());
-                  string MD5 = (string)sum.Result();
-
                   if (MD5 != ExpectedMD5)
                     {
                       log_stderr ("File %s is corrupted (MD5sum).", File.c_str());
