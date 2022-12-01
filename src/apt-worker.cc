@@ -2401,7 +2401,6 @@ mark_for_install (pkgCache::PkgIterator &pkg)
       if (State.InstBroken() == true || State.InstPolicyBroken() == true)
 	Cache.MarkInstall(pkg,true);
 
-      Fix.InstallProtect();
       if (Fix.Resolve(true) == false)
 	 _error->Discard();
     }
@@ -2527,7 +2526,6 @@ mark_for_remove (pkgCache::PkgIterator &pkg)
       Fix.Remove(pkg);
       Cache.MarkDelete (pkg,false);
 
-      Fix.InstallProtect();
       if (Fix.Resolve(true) == false)
 	 _error->Discard();
     }
