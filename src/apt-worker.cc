@@ -88,6 +88,8 @@
 #include <apt-pkg/policy.h>
 #include <apt-pkg/hashes.h>
 #include <apt-pkg/fileutl.h>
+#include <apt-pkg/progress.h>
+#include <apt-pkg/install-progress.h>
 
 #include <glib.h>
 
@@ -562,7 +564,7 @@ myPolicy::GetCandidateVer (pkgCache::PkgIterator Pkg)
 bool
 myCacheFile::Open (OpProgress &Progress, bool WithLock)
 {
-  if (BuildCaches(Progress,WithLock) == false)
+  if (BuildCaches(&Progress,WithLock) == false)
     return false;
   
   // The policy engine
@@ -5780,7 +5782,9 @@ operation (bool check_only,
 
       /* Do install */
       _system->UnLock();
-      pkgPackageManager::OrderResult Res = Pm->DoInstall (status_fd);
+      // TODO: do we need to free this progress_mgr?
+      APT::Progress::PackageManagerProgressFd *progress_mgr = new APT::Progress::PackageManagerProgressFd(status_fd);
+      pkgPackageManager::OrderResult Res = Pm->DoInstall (progress_mgr);
       _system->Lock();
 
       awc->cache->save_extra_info ();
