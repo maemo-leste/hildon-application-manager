@@ -50,13 +50,12 @@ hildon_application_manager_CXXFLAGS = $(HAM_DEPS_CFLAGS) \
 					$(LAUNCHER_DEPS_CFLAGS) \
                                         -fno-rtti -fno-exceptions
 hildon_application_manager_LDADD =    $(HAM_DEPS_LIBS) \
-					$(LAUNCHER_DEPS_LIBS) \
-					-lapt-pkg
+					$(LAUNCHER_DEPS_LIBS)
 
 hildon_application_manager_run_SOURCES =  $(hildon_application_manager_SOURCES)
 hildon_application_manager_run_CFLAGS =   $(HAM_DEPS_CFLAGS)
 hildon_application_manager_run_CXXFLAGS = $(HAM_DEPS_CFLAGS)
-hildon_application_manager_run_LDADD =    $(HAM_DEPS_LIBS) -lapt-pkg
+hildon_application_manager_run_LDADD =    $(HAM_DEPS_LIBS)
 
 hildon_application_manager_config_SOURCES =		\
                hildon-application-manager-config.cc	\
@@ -79,7 +78,7 @@ apt_worker_SOURCES = apt-worker.cc  	 \
 
 apt_worker_CFLAGS = $(AW_DEPS_CFLAGS)
 apt_worker_CXXFLAGS = $(AW_DEPS_CFLAGS)
-apt_worker_LDADD = $(AW_DEPS_LIBS) -lapt-pkg
+apt_worker_LDADD = $(AW_DEPS_LIBS)
 
 ham_after_boot_SOURCES = ham-after-boot.c \
 			user_files.c \
