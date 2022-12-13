@@ -75,7 +75,6 @@
 #include <apt-pkg/acquire-item.h>
 #include <apt-pkg/cachefile.h>
 #include <apt-pkg/strutl.h>
-#include <apt-pkg/sptr.h>
 #include <apt-pkg/packagemanager.h>
 #include <apt-pkg/deblistparser.h>
 #include <apt-pkg/debversion.h>
@@ -489,8 +488,8 @@ pkgCache::VerIterator
 myPolicy::GetCandidateVer (pkgCache::PkgIterator Pkg)
 {
   // Look for a package pin and evaluate it.
-  signed Max = GetPriority(Pkg);
-  pkgCache::VerIterator Pref = GetMatch(Pkg);
+  pkgCache::VerIterator Pref = GetCandidateVer(Pkg);
+  signed Max = GetPriority(Pref);
   
   /* Falling through to the default version.. Setting Max to zero
      effectively excludes everything <= 0 which are the non-automatic
@@ -2174,8 +2173,9 @@ package_replaces (pkgCache::PkgIterator &pkg,
     {
       if (Dep->Type == pkgCache::Dep::Replaces)
 	{
-	  SPtrArray<pkgCache::Version *> List = Dep.AllTargets();
-	  for (pkgCache::Version **I = List; *I != 0; I++)
+	  //SPtrArray<pkgCache::Version *> List = Dep.AllTargets();
+	  std::unique_ptr<pkgCache::Version *> List(Dep.AllTargets());
+	  for (pkgCache::Version **I = List.get(); *I != 0; I++)
 	    {
 	      pkgCache::VerIterator Ver(cache,*I);
 	      pkgCache::PkgIterator Pkg = Ver.ParentPkg();
@@ -2304,11 +2304,13 @@ mark_for_install_1 (pkgCache::PkgIterator &pkg, int level)
 
       /* This bit is for processing the possibilty of an install/upgrade
          fixing the problem */
-      SPtrArray<pkgCache::Version *> List = Start.AllTargets();
+      //SPtrArray<pkgCache::Version *> List = Start.AllTargets();
+      std::unique_ptr<pkgCache::Version *> List;
+      List.reset(Start.AllTargets());
       if ((cache[Start] & pkgDepCache::DepCVer) == pkgDepCache::DepCVer)
 	{
 	  // Right, find the best version to install..
-	  pkgCache::Version **Cur = List;
+	  pkgCache::Version **Cur = List.get();
 	  pkgCache::PkgIterator P = Start.TargetPkg();
 	  pkgCache::PkgIterator InstPkg(cache,0);
 	 
@@ -2360,7 +2362,7 @@ mark_for_install_1 (pkgCache::PkgIterator &pkg, int level)
       if (Start->Type == pkgCache::Dep::Conflicts
 	  || Start->Type == pkgCache::Dep::Obsoletes)
 	{
-	  for (pkgCache::Version **I = List; *I != 0; I++)
+	  for (pkgCache::Version **I = List.get(); *I != 0; I++)
 	    {
 	      pkgCache::VerIterator Ver(cache,*I);
 	      pkgCache::PkgIterator target = Ver.ParentPkg();
@@ -5590,7 +5592,7 @@ operation (bool check_only,
 {
   AptWorkerCache *awc = AptWorkerCache::GetCurrent ();
   pkgCacheFile &Cache = *(awc->cache);
-  SPtr<myDPkgPM> Pm;
+  std::unique_ptr<myDPkgPM> Pm;
 
   if (_config->FindB("APT::Get::Purge",false) == true)
     {
@@ -5656,7 +5658,7 @@ operation (bool check_only,
 
   // Create the package manager
   //
-  Pm = new myDPkgPM (Cache);
+  Pm.reset(new myDPkgPM (Cache));
 
   // Create the order list explicitely in a way that we like.  We
   // have to do it explicitely since CreateOrderList is not virtual.
