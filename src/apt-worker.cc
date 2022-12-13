@@ -399,7 +399,7 @@ AptWorkerCache::Initialize (void)
  * myCacheFile includes an array of these, with an entry per
  * package.
  */
-typedef struct extra_info_struct
+struct extra_info_struct
 {
   bool autoinst : 1;
   bool related : 1;
