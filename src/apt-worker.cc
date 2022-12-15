@@ -5704,9 +5704,8 @@ operation (bool check_only,
 
       /* Do install */
       _system->UnLock();
-      APT::Progress::PackageManagerProgressFd *progress_mgr = new APT::Progress::PackageManagerProgressFd(status_fd);
-      pkgPackageManager::OrderResult Res = Pm->DoInstall (progress_mgr);
-      delete progress_mgr;
+      APT::Progress::PackageManagerProgressFd progress_mgr(status_fd);
+      pkgPackageManager::OrderResult Res = Pm->DoInstall (&progress_mgr);
       _system->Lock();
 
       awc->cache->save_extra_info ();
