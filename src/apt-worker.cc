@@ -2233,9 +2233,9 @@ mark_for_install_1 (pkgCache::PkgIterator &pkg, int level)
 	  pkgCache::Version **Cur = List.get();
 	  pkgCache::PkgIterator P = Start.TargetPkg();
 	  pkgCache::PkgIterator InstPkg(cache,0);
-	 
+
 	  // See if there are direct matches (at the start of the list)
-	  for (; *Cur != 0 && (*Cur)->ParentPkg == P.Index(); Cur++)
+	  for (; *Cur != 0 && (*Cur)->ParentPkg == P.MapPointer(); Cur++)
 	    {
 	      pkgCache &pkgcache = cache.GetCache ();
 	      pkgCache::PkgIterator Pkg(pkgcache,
