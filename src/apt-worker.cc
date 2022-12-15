@@ -3495,8 +3495,6 @@ encode_package_repository (pkgCache::VerIterator Version, int summary_kind)
                       g_strfreev (tmp);
                     }
 
-                  delete Index;
-
                   char* catalogue = find_catalogue_by_info (archive_uri,
                                                             dist, comp);
 
