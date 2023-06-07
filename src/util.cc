@@ -1864,7 +1864,7 @@ button_press_cb (GtkWidget *treeview, GdkEventButton *event, gpointer data)
 #if HILDON_CHECK_VERSION (2,2,5)
 
 static gboolean
-live_search_look_for_prefix (gchar **tokens, const gchar *prefix)
+live_search_look_for (gchar **tokens, const gchar *prefix)
 {
   gchar *needle = NULL;
   gboolean found = false;
@@ -1880,7 +1880,7 @@ live_search_look_for_prefix (gchar **tokens, const gchar *prefix)
   /* Look through the tokens */
   for (i = 0; tokens[i] != NULL; i++)
     {
-      found = g_str_has_prefix (tokens[i], needle);
+      found = (strstr (tokens[i], needle)!=NULL);
 
       /* Don't keep on looking if already found */
       if (found)
@@ -1942,11 +1942,11 @@ live_search_filter_func (GtkTreeModel *model,
     for (i = 0; text_tokens[i] != NULL; i++)
       {
         /* Check package name */
-        retvalue = live_search_look_for_prefix (name_tokens, text_tokens[i]);
+        retvalue = live_search_look_for (name_tokens, text_tokens[i]);
 
         /* Check short description if not found yet */
         if (!retvalue)
-          retvalue = live_search_look_for_prefix (desc_tokens, text_tokens[i]);
+          retvalue = live_search_look_for (desc_tokens, text_tokens[i]);
 
         /* If not found reached this point, don't keep on looking */
         if (!retvalue)
