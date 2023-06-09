@@ -207,27 +207,32 @@ set_current_view (view *v)
   if (v->id == MAIN_VIEW)
     {
       enable_refresh (false);
+      enable_search (false);
       prevent_updating ();
     }
   else if (v->id == UNINSTALL_APPLICATIONS_VIEW)
     {
       enable_refresh (false);
+      enable_search (true);
       allow_updating ();
     }
   else if (v->id == INSTALL_SECTION_VIEW
            || v->id == SEARCH_RESULTS_VIEW)
     {
       enable_refresh (true);
+      enable_search (true);
       allow_updating ();
     }
   else if (v->id == INSTALL_APPLICATIONS_VIEW)
     {
       enable_refresh (true);
+      enable_search (true);
       allow_updating ();
     }
   else if (v->id == UPGRADE_APPLICATIONS_VIEW)
     {
       enable_refresh (true);
+      enable_search (true);
       allow_updating ();
     }
 
