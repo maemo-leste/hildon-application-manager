@@ -33,6 +33,7 @@
 #include "log.h"
 #include "settings.h"
 #include "repo.h"
+#include "search.h"
 #include "apt-worker-client.h"
 #include "user_files.h"
 
@@ -56,6 +57,7 @@ add_item (HildonAppMenu *menu, const gchar *label, void (*func)())
 static GtkWidget *settings_menu_item = NULL;
 static GtkWidget *install_from_file_menu_item = NULL;
 static GtkWidget *refresh_menu_item = NULL;
+static GtkWidget *search_menu_item = NULL;
 
 void
 set_settings_menu_visible (bool flag)
@@ -130,7 +132,11 @@ create_menu ()
     add_item (main,
 	      _("ai_me_settings"),
 	      show_settings_dialog_flow);
-
+  /* Search */
+  search_menu_item =
+    add_item(main,
+           _("ai_me_search"),
+           show_search_dialog_flow);
   gtk_widget_show_all (GTK_WIDGET (main));
 
   /* Hide restore_packages menu item when there is no backup */
@@ -150,7 +156,12 @@ enable_refresh (bool flag)
   if (refresh_menu_item)
     g_object_set (G_OBJECT (refresh_menu_item), "visible", flag, NULL);
 }
-
+void
+enable_search (bool flag)
+{
+  if(search_menu_item)
+    g_object_set(G_OBJECT (search_menu_item), "visible", flag, NULL);
+}
 #if defined (TAP_AND_HOLD) && defined (MAEMO_CHANGES)
 GtkWidget *
 create_package_menu (const char *op_label)
