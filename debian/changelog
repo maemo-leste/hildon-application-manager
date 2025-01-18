@@ -1,3 +1,9 @@
+hildon-application-manager (2.4.7) unstable; urgency=low
+
+  * Port to newer glib
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Sat, 18 Jan 2025 17:31:11 +0100
+
 hildon-application-manager (2.4.6) unstable; urgency=low
 
   * Fix crash in package details view
