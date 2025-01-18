@@ -24,6 +24,12 @@
 #ifndef CONFUTILS_H
 #define CONFUTILS_H
 
+/* Include glib.h before we include xexp.h so that glib doesn't try to do things
+ * that make the compiler unhappy.
+ * See https://gitlab.gnome.org/GNOME/glib/-/issues/2331
+ **/
+#include <glib.h>
+
 extern "C" {
 #include "xexp.h"
 }
