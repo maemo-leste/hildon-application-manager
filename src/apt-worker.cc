@@ -1416,10 +1416,6 @@ misc_init ()
 
   cache_init (false);
 
-#ifdef HAVE_APT_TRUST_HOOK
-  apt_set_index_trust_level_for_package_hook (index_trust_level_for_package);
-#endif
-
   clean_temp_catalogues ();
 
   // initialize the MMC mount points with defaults
@@ -5008,12 +5004,34 @@ find_deb_meta_index (pkgIndexFile *index)
 #define VALIDSIG "VALIDSIG"
 #define GOODSIG  "GOODSIG"
 
+static std::string URIEncode(std::string const &part)
+{
+   // The "+" is encoded as a workaround for an S3 bug (LP#1003633 and LP#1086997)
+   return QuoteString(part, _config->Find("Acquire::URIEncode", "+~ ").c_str());
+}
+
+static std::string MetaIndexURI(std::string URI, std::string const &Dist, char const * const Type)
+{
+   if (Dist == "/")
+      ;
+   else if (Dist[Dist.size()-1] == '/')
+      URI += URIEncode(Dist);
+   else
+      URI += "dists/" + URIEncode(Dist) + "/";
+   return URI + URIEncode(Type);
+}
+
+static std::string MetaIndexFile(debReleaseIndex *meta, const char *Type)
+{
+   return _config->FindDir("Dir::State::lists") +
+      URItoFileName(MetaIndexURI(meta->GetURI(), meta->GetDist(), Type));
+}
+
 static char *
 get_meta_info_key (debReleaseIndex *meta)
 {
-#if 0
-  string file = meta->MetaIndexFile ("Release.gpg.info");
   char *key = NULL;
+  string file = MetaIndexFile(meta, "InRelease");
 
   FILE *f = fopen (file.c_str(), "r");
   if (f)
@@ -5021,27 +5039,48 @@ get_meta_info_key (debReleaseIndex *meta)
       char *line = NULL;
       size_t len = 0;
       ssize_t n;
+      bool open_signature = false;
+      string sig;
 
       while ((n = getline (&line, &len, f)) != -1)
-	{
-	  if (n > 0 && line[n-1] == '\n')
-	    line[n-1] = '\0';
+        {
+          if (n > 0 && line[n - 1] == '\n')
+            line[n - 1] = '\0';
 
-	  bool is_valid =  g_str_has_prefix (line, VALIDSIG);
-	  if (is_valid || g_str_has_prefix (line, GOODSIG))
-	    {
-	      int dis = is_valid ? strlen (VALIDSIG) : strlen (GOODSIG);
-	      key = g_strchug (g_strdup (line + dis)); // *Cough*
-	      break;
-	    }
-	}
+          if (open_signature)
+            {
+              sig += line;
+              if (sig.length() >= 44)
+                {
+                  gsize l;
+                  guchar *k = g_base64_decode(sig.substr(16, 28).c_str(), &l);
+
+                  if (l >= 20)
+                    {
+                      char *p = g_new(char, 41);
+
+                      key = p;
+
+                      for (int i = 0; i < 20; i++)
+                        {
+                          sprintf(p, "%02X", k[i]);
+                          p += 2;
+                        }
+                    }
+
+                  g_free(k);
+                  break;
+                }
+            }
+          else if (!strcmp(line, "-----BEGIN PGP SIGNATURE-----"))
+            open_signature  = true;
+        }
 
       free (line);
       fclose (f);
     }
 
   return key;
-#endif
 }
 
 static int
@@ -5234,6 +5273,63 @@ encode_upgrades ()
          harder...
 */
 
+class myTrustLevel
+{
+public:
+  myTrustLevel(pkgSourceList *const Sources, pkgCache::VerIterator const &Version) :
+    TrustLevel(0)
+  {
+      std::vector<pkgCache::VerFileIterator> trusted;
+      /* First, find which versions come from trusted sources, keeping the
+         'most trusted' sources only
+      */
+      for (auto i = Version.FileList(); i.end() == false; ++i)
+        {
+          pkgIndexFile *Index;
+
+          if (!Sources->FindIndex(i.File(), Index))
+            continue;
+
+          int l = index_trust_level_for_package(Index, Version);
+
+          if (l >= TrustLevel)
+            {
+              if (l > TrustLevel)
+                trusted.clear();
+
+              trusted.push_back(i);
+              TrustLevel = l;
+            }
+        }
+
+      /* Now, mark all not trusted */
+      for (auto i = Version.FileList(); i.end() == false; ++i)
+        {
+          if (std::find(trusted.begin(), trusted.end(), i) == trusted.end())
+            i.File()->Flags |= pkgCache::Flag::NotSource;
+        }
+  }
+protected:
+  int TrustLevel;
+};
+
+class myAcqArchive : public myTrustLevel, public pkgAcqArchive
+{
+public:
+  explicit myAcqArchive(pkgAcquire *const Owner, pkgSourceList *const Sources,
+                        pkgRecords *const Recs, pkgCache::VerIterator const &Version,
+                        std::string &StoreFilename) :
+    myTrustLevel(Sources, Version),
+    pkgAcqArchive(Owner, Sources, Recs, Version, StoreFilename)
+  {
+  };
+
+  bool IsTrusted()
+  {
+     return TrustLevel > 0;
+  }
+};
+
 class myDPkgPM : public pkgDPkgPM
 {
 public:
@@ -5242,8 +5338,49 @@ public:
 
   bool CreateOrderList ();
 
+  bool GetArchives(pkgAcquire *Owner,pkgSourceList *Sources, pkgRecords *Recs);
+
   myDPkgPM(pkgDepCache *Cache);
 };
+
+bool myDPkgPM::GetArchives(pkgAcquire *Owner,pkgSourceList *Sources,
+                           pkgRecords *Recs)
+{
+   auto &List = pkgPackageManager::List;
+
+   if (CreateOrderList() == false)
+      return false;
+
+   bool const ordering =
+        _config->FindB("PackageManager::UnpackAll",true) ?
+                List->OrderUnpack() : List->OrderCritical();
+   if (ordering == false)
+      return _error->Error("Internal ordering error");
+
+   for (pkgOrderList::iterator I = List->begin(); I != List->end(); ++I)
+   {
+      PkgIterator Pkg(Cache,*I);
+      FileNames[Pkg->ID] = string();
+
+      // Skip packages to erase
+      if (Cache[Pkg].Delete() == true)
+         continue;
+
+      // Skip Packages that need configure only.
+      if (Pkg.State() == pkgCache::PkgIterator::NeedsConfigure &&
+          Cache[Pkg].Keep() == true)
+         continue;
+
+      // Skip already processed packages
+      if (List->IsNow(Pkg) == false)
+         continue;
+
+      new myAcqArchive(Owner, Sources, Recs, Cache[Pkg].InstVerIter(Cache),
+                       FileNames[Pkg->ID]);
+   }
+
+   return true;
+}
 
 bool
 myDPkgPM::CreateOrderList ()
