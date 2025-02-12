@@ -421,7 +421,7 @@ public:
     pf_domain = new int[Owner->Head().PackageFileCount];
   }
 
-  void InitDomains ();
+  void InitDomains (const pkgSourceList &List);
 
   virtual pkgCache::VerIterator GetCandidateVer(pkgCache::PkgIterator Pkg);
 };
@@ -431,7 +431,7 @@ class myCacheFile : public pkgCacheFile {
 public:
   bool Open (OpProgress &Progress, bool WithLock = true);
 
-  void load_extra_info ();
+  void load_extra_info (const pkgSourceList &sources);
   void save_extra_info ();
 
   extra_info_struct *extra_info;
@@ -447,24 +447,17 @@ public:
   }
 };
 
-static void set_sources_for_get_domain (pkgSourceList *sources);
+static void set_sources_for_get_domain (const pkgSourceList *sources);
 static int get_domain (pkgIndexFile*);
 
 void
-myPolicy::InitDomains ()
+myPolicy::InitDomains (const pkgSourceList &List)
 {
+  set_sources_for_get_domain (&List);
+
   for (pkgCache::PkgFileIterator I = Cache->FileBegin();
        I != Cache->FileEnd(); I++)
     pf_domain[I->ID] = DOMAIN_UNSIGNED;
-
-  pkgSourceList List;
-  if (!List.ReadMainList ())
-    {
-      _error->DumpErrors();
-      return;
-    }
-
-  set_sources_for_get_domain (&List);
 
   for (pkgCache::PkgFileIterator I = Cache->FileBegin();
        I != Cache->FileEnd(); I++)
@@ -478,7 +471,7 @@ myPolicy::InitDomains ()
 	       domains[pf_domain[I->ID]].name);
 	}
     }
-  
+
   set_sources_for_get_domain (NULL);
 }
 
@@ -574,9 +567,18 @@ myCacheFile::Open (OpProgress &Progress, bool WithLock)
   if (ReadPinFile(*Policy) == false)
     return false;
   
-  pol->InitDomains ();
+
+  pkgSourceList List;
+
+  if (!List.ReadMainList ())
+    {
+      _error->DumpErrors();
+      return false;
+    }
+
+  pol->InitDomains (List);
   
-  load_extra_info ();
+  load_extra_info (List);
 
   // Create the dependency cache
   DCache = new pkgDepCache(Cache,Policy);
@@ -591,6 +593,19 @@ myCacheFile::Open (OpProgress &Progress, bool WithLock)
   return true;
 }
 
+static bool
+create_extra_info_dir()
+{
+  if (mkdir ("/var/lib/hildon-application-manager", 0777) < 0
+      && errno != EEXIST)
+    {
+      log_stderr ("/var/lib/hildon-application-manager: %m");
+      return false;
+    }
+
+  return true;
+}
+
 /* Save the 'extra_info' of the cache.  We first make a copy of the
    Auto flags in our own extra_info storage so that CACHE_RESET
    will reset the Auto flags to the state last saved with this
@@ -600,12 +615,8 @@ myCacheFile::Open (OpProgress &Progress, bool WithLock)
 void
 myCacheFile::save_extra_info ()
 {
-  if (mkdir ("/var/lib/hildon-application-manager", 0777) < 0
-      && errno != EEXIST)
-    {
-      log_stderr ("/var/lib/hildon-application-manager: %m");
-      return;
-    }
+  if (!create_extra_info_dir())
+    return;
 
   FILE *f = fopen ("/var/lib/hildon-application-manager/autoinst", "w");
   if (f)
@@ -655,18 +666,20 @@ myCacheFile::save_extra_info ()
    transfer the auto flag into the actual cache.  */
 
 void
-myCacheFile::load_extra_info ()
+myCacheFile::load_extra_info (const pkgSourceList &sources)
 {
   pkgCache &cache = *Cache;
 
   int package_count = cache.Head().PackageCount;
+
+  DBG ("package_count: %d", package_count);
 
   extra_info = new extra_info_struct[package_count];
 
   for (int i = 0; i < package_count; i++)
     {
       extra_info[i].autoinst = false;
-      extra_info[i].cur_domain = DOMAIN_DEFAULT;
+      extra_info[i].cur_domain = DOMAIN_INVALID;
     }
 
   FILE *f = fopen ("/var/lib/hildon-application-manager/autoinst", "r");
@@ -724,6 +737,70 @@ myCacheFile::load_extra_info ()
 	}
 
       g_free (name);
+    }
+
+  bool domains_changed = false;
+  set_sources_for_get_domain(&sources);
+
+  for (pkgCache::PkgIterator pkg = cache.PkgBegin(); !pkg.end (); pkg++)
+    {
+      if (extra_info[pkg->ID].cur_domain == DOMAIN_INVALID)
+        {
+          pkgCache::VerIterator cur = pkg.CurrentVer ();
+          domain_t domain = DOMAIN_UNSIGNED;
+
+	  if (!cur.end ())
+	    {
+	      for (pkgCache::VerFileIterator VF = cur.FileList(); VF.end() == false; ++VF)
+	      {
+		 pkgCache::PkgFileIterator const PF = VF.File();
+		 if (PF.Flagged(pkgCache::Flag::NotSource))
+		    continue;
+
+		 pkgIndexFile *Indx;
+
+		 if (sources.FindIndex(PF, Indx))
+		   {
+		     domain_t candidate = get_domain (Indx);
+
+		     if (domains[candidate].trust_level > domains[domain].trust_level)
+		       {
+			 extra_info[pkg->ID].cur_domain = candidate;
+			 domains_changed = true;
+		       }
+		   }
+		}
+	    }
+	}
+    }
+
+  set_sources_for_get_domain(NULL);
+
+  if (!domains_changed)
+    return;
+
+  if (!create_extra_info_dir())
+    return;
+
+  for (domain_t i = 0; i < domains_number; i++)
+    {
+      char *name =
+          g_strdup_printf ("/var/lib/hildon-application-manager/domain.%s",
+                           domains[i].name);
+      FILE *f = fopen (name, "w");
+
+      if (f)
+        {
+          for (pkgCache::PkgIterator pkg = cache.PkgBegin(); !pkg.end (); pkg++)
+            {
+              if (extra_info[pkg->ID].cur_domain == i)
+                fprintf (f, "%s\n", pkg.Name ());
+            }
+
+	  fflush (f);
+	  fsync (fileno (f));
+	  fclose (f);
+	}
     }
 }
 
@@ -4967,10 +5044,10 @@ cmd_autoremove ()
    default domain, which they usually are.
 */
 
-static pkgSourceList *cur_sources;
+static const pkgSourceList *cur_sources;
 
 static void
-set_sources_for_get_domain (pkgSourceList *sources)
+set_sources_for_get_domain (const pkgSourceList *sources)
 {
   cur_sources = sources;
 }
