@@ -918,7 +918,7 @@ must_write (void *buf, ssize_t n)
    SEQ.  It either succeeds or does not return.
 */
 void
-send_response_raw (int cmd, int seq, void *response, size_t len)
+send_response_raw (int cmd, int seq, void *response, int len)
 {
   apt_response_header res = { cmd, seq, len };
   must_write (&res, sizeof (res));
@@ -3918,7 +3918,7 @@ download_lists (xexp *catalogues_for_report,
   // Get the source list
   pkgSourceList List;
   if (List.ReadMainList () == false)
-    return rescode_failure;
+    return false;
 
   // Lock the list directory
   FileFd Lock;
