@@ -387,6 +387,7 @@ AptWorkerCache::Initialize (void)
           return;
         }
 
+      _config->Set ("APT::Architecture", DEB_HOST_ARCH);
       _config->Set ("DPkg::Options::", "--force-confold");
       _config->Set ("Dir::Log", "var/log");
       _config->Set ("Dir::Log::Terminal", "");
@@ -744,22 +745,26 @@ myCacheFile::load_extra_info (const pkgSourceList &sources)
 
   for (pkgCache::PkgIterator pkg = cache.PkgBegin(); !pkg.end (); pkg++)
     {
+      if (strcmp(pkg.Arch (), DEB_HOST_ARCH))
+	continue;
+
       if (extra_info[pkg->ID].cur_domain == DOMAIN_INVALID)
         {
-          pkgCache::VerIterator cur = pkg.CurrentVer ();
-          domain_t domain = DOMAIN_UNSIGNED;
+	  pkgCache::VerIterator cur = pkg.CurrentVer ();
+	  domain_t domain = DOMAIN_UNSIGNED;
 
 	  if (!cur.end ())
 	    {
-	      for (pkgCache::VerFileIterator VF = cur.FileList(); VF.end() == false; ++VF)
+	      for (pkgCache::VerFileIterator VF = cur.FileList (); !VF.end (); ++VF)
 	      {
-		 pkgCache::PkgFileIterator const PF = VF.File();
-		 if (PF.Flagged(pkgCache::Flag::NotSource))
+		 pkgCache::PkgFileIterator const PF = VF.File ();
+
+		 if (PF.Flagged (pkgCache::Flag::NotSource))
 		    continue;
 
 		 pkgIndexFile *Indx;
 
-		 if (sources.FindIndex(PF, Indx))
+		 if (sources.FindIndex (PF, Indx))
 		   {
 		     domain_t candidate = get_domain (Indx);
 
@@ -791,7 +796,7 @@ myCacheFile::load_extra_info (const pkgSourceList &sources)
 
       if (f)
         {
-          for (pkgCache::PkgIterator pkg = cache.PkgBegin(); !pkg.end (); pkg++)
+          for (pkgCache::PkgIterator pkg = cache.PkgBegin (); !pkg.end (); pkg++)
             {
               if (extra_info[pkg->ID].cur_domain == i)
                 fprintf (f, "%s\n", pkg.Name ());
@@ -2912,6 +2917,11 @@ cmd_get_package_list ()
       //
       if (only_available && cend)
 	continue;
+
+      // skip foreign architecture packages
+      //
+      if (!only_installed && strcmp(pkg.Arch (), DEB_HOST_ARCH))
+        continue;
 
       // skip packages that are not installed and not available
       //
