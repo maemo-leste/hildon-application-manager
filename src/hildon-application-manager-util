@@ -5,8 +5,10 @@
 
 set -e
 
-cats="/var/lib/hildon-application-manager/catalogues.backup"
-cats2="/var/lib/hildon-application-manager/catalogues2.backup"
+hamdir=/var/lib/hildon-application-manager
+cats=$hamdir"/catalogues.backup"
+cats2=$hamdir"/catalogues2.backup"
+reset_file=$hamdir"/reset.domains"
 
 if [ "$1" = "restore-catalogues" ]; then
   /usr/bin/hildon-application-manager-config add "$cats"
@@ -43,6 +45,11 @@ elif [ "$1" = "check-state" ]; then
             --dest='com.nokia.hildon_update_notifier' \
             /com/nokia/hildon_update_notifier \
             com.nokia.hildon_update_notifier.check_state
+elif [ "$1" = "reset-domains" ]; then
+  if [ -e $reset_file ]; then
+    rm -f $hamdir/domain.*
+    rm -f $reset_file
+  fi
 else
   echo >&2 "usage: hildon-application-manager-util restore-catalogues"
   echo >&2 "       hildon-application-manager-util clear-user-catalogues"
