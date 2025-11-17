@@ -4313,6 +4313,41 @@ cmdline_check_updates (char **argv)
     return 1;
 }
 
+// strtabexpand - Converts tabs into 8 spaces                          /*{{{*/
+// ---------------------------------------------------------------------
+/* */
+char *_strtabexpand(char *String,size_t Len)
+{
+   for (char *I = String; I != I + Len && *I != 0; I++)
+   {
+      if (*I != '\t')
+        continue;
+      if (I + 8 > String + Len)
+      {
+        *I = 0;
+        return String;
+      }
+
+      /* Assume the start of the string is 0 and find the next 8 char
+         division */
+      int Len;
+      if (String == I)
+        Len = 1;
+      else
+        Len = 8 - ((String - I) % 8);
+      Len -= 2;
+      if (Len <= 0)
+      {
+        *I = ' ';
+        continue;
+      }
+
+      memmove(I + Len,I + 1,strlen(I) + 1);
+      for (char *J = I; J + Len != I; *I = ' ', I++);
+   }
+   return String;
+}
+
 /* APTCMD_GET_CATALOGUES
  *
  * We also return the non-comment lines from all sources.list files in
