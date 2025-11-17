@@ -5475,8 +5475,7 @@ myDPkgPM::CreateOrderList ()
   if (pkgPackageManager::List != 0)
     return true;
    
-  delete pkgPackageManager::List;
-  pkgPackageManager::List = new pkgOrderList(&Cache);
+  pkgPackageManager::List = std::make_unique<pkgOrderList>(&Cache);
    
   // Generate the list of affected packages and sort it
   for (PkgIterator I = Cache.PkgBegin(); I.end() == false; I++)
