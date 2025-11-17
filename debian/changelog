@@ -1,3 +1,9 @@
+hildon-application-manager (2.4.11) unstable; urgency=low
+
+  * hildon-application-manager: fix compilation with new API
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Mon, 17 Nov 2025 18:27:34 +0100
+
 hildon-application-manager (2.4.10) unstable; urgency=low
 
   * hildon-application-manager-util: add reset-domains command
