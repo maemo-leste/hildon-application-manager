@@ -1670,6 +1670,10 @@ main (int argc, char **argv)
   else if (!strcmp (argv[0], "check-for-updates"))
     {
       get_apt_worker_lock (true);
+      /* Set ourselves to low priority because we're not in a rush and
+       * devices with slow IO and not a lot of RAM should not suffer
+       * too much */
+      (void)nice(15);
       misc_init ();
       return cmdline_check_updates (argv);
     }
